@@ -1,7 +1,7 @@
 
 
 Readme · MD
-# DocGen AI — Sistema de Geração Inteligente de Documentos
+# LAUDA — Sistema de Geração Inteligente de Documentos
  
 > Sistema que permite ao usuário cadastrar um documento original e gerar novas versões automaticamente com Inteligência Artificial, mantendo estrutura, formatação e coerência com o conteúdo original, a partir de um simples prompt.
  

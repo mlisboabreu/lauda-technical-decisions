@@ -61,22 +61,32 @@ Fluxo resumido:
 ---
  
 ## Decisões Técnicas
+
+### por que a decisão das stacks?
+
+O Next.js foi escolhido por ser um framework em que, por padrão, os componentes são executados no servidor e não no navegador, o que torna a aplicação mais rápida e segura, já que chaves de autenticação e informações sensíveis nunca chegam ao usuário final.
+
+No backend, optou-se pelo NestJS. Como a intenção é adicionar cada vez mais funcionalidades ao sistema, ele foi escolhido para facilitar a organização futura do código. Além disso, o framework adota princípios de microsserviços, com uma estrutura modular que se alinha bem à proposta do sistema.
+
+No gerador, por se tratar apenas do motor de geração de documentos, optou-se por um framework mais leve e simples, como o Express. Nas primeiras versões, era utilizado Python com FastAPI, por sua melhor integração com as LLMs disponíveis no mercado. No entanto, o JavaScript se saiu melhor na manipulação das runs presentes nos documentos .docx, o que levou à escolha de JavaScript e Express no gerador definitivo.
  
 ### Por que separar o gerador de documentos em um microsserviço?
  
-O processamento com IA é naturalmente mais lento que uma requisição HTTP comum. Manter essa lógica dentro do backend principal criaria bloqueios e tempos de espera desnecessários. Isolando em um serviço próprio, o backend continua responsivo enquanto o processamento acontece de forma assíncrona.
+O processamento com IA é naturalmente mais lento que uma requisição HTTP comum. Manter essa lógica dentro do backend principal criaria bloqueios e tempos de espera desnecessários. Ao isolá-la em um serviço próprio, o backend permanece responsivo enquanto o processamento ocorre de forma assíncrona. Além disso, a decisão também se deve à necessidade de evitar que a IA tivesse acesso direto ao servidor ou ao banco de dadosm, o objetivo era isolá-la ao máximo.
  
 ### Por que mensageria (RabbitMQ) em vez de chamada direta entre serviços?
  
-Se o gerador demorar ou cair no meio do processamento, uma chamada HTTP direta deixaria o backend esperando indefinidamente. Com fila:
+Considerando os imprevistos que podem ocorrer no sistema, seria arriscado fazer uma requisição direta ao microsserviço e aguardar a resposta: o sistema ficaria travado por tempo indeterminado. Dependendo da quantidade de páginas a serem processadas ou reescritas no documento, o tempo de processamento pode variar bastante, e há ainda a dependência de uma chamada de API para utilizar a IA.
+
+Por isso, optou-se pelo sistema de mensageria, no qual ambos os serviços seguem seu ciclo de forma assíncrona enquanto o outro executa alguma tarefa. A mensagem só sai da fila quando o consumer confirma o recebimento via ack; assim, se alguma das partes ficar indisponível, a comunicação entre os sistemas continua garantida.
  
 - O backend publica a mensagem e segue livre
 - O gerador consome e confirma via ACK somente após concluir
 - Se cair antes de confirmar, a mensagem retorna automaticamente para a fila
 - Mensagens com erro recorrente vão para uma Dead Letter Queue, isoladas para tratamento posterior
-### Por que Redis para cadastro e recuperação de senha?
+### Por que Redis?
  
-São dados de vida curta, como um código de confirmação que expira em minutos. Persistir isso em um banco relacional geraria escrita e leitura desnecessária em uma estrutura pensada para dados de longo prazo. O cache resolve isso com muito mais velocidade e sem sobrecarregar o Postgres.
+O Redis foi utilizado para dados que não fariam sentido serem persistidos no banco de dados informações cuja utilidade se limita a uma janela curta de tempo, como os códigos de confirmação enviados por e-mail. Esses códigos são usados na confirmação da criação da conta no sistema, para verificar se o e-mail existe, e também na confirmação da troca de senha do usuário.
  
 ### Por que WebSocket em vez de HTTP tradicional?
  
@@ -87,15 +97,9 @@ Como a geração do documento pode levar algum tempo, o frontend usa WebSocket p
 - Notificar com um alerta claro quando o documento é salvo com sucesso
 ---
  
-## Trechos de Implementação
- 
-(Espaço reservado para prints de código específicos: consumer da fila com ACK, lógica de cache, tratamento da Dead Letter Queue)
- 
----
- 
 ## Status do Projeto
  
-Em fase final de testes antes do lançamento público. Frontend disponível em repositório separado e público.
+No momento ele está em produção e rodando em lauda.work e é constantemente atualizado.
  
 ---
  
